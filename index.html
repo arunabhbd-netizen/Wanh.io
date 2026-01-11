@@ -1,32 +1,11 @@
 Dockerfile
 FROM ghcr.io/huggingface/text-generation-inference:1.4
-
-ENV MODEL_ID=${MODEL}
+ENV MODEL_ID=TheBloke/TinyLlama-1B-Chat-GPTQ
 ENV QUANTIZE=gptq
 ENV MAX_INPUT_LENGTH=1024
 ENV MAX_TOTAL_TOKENS=2048
 ENV MAX_BATCH_PREFILL_TOKENS=2048
-
-# copy custom chat UI
-COPY static /app/static
-ENV UI_PATH=/app/static
-
-fly.toml
-app = "wanh-ai"          # your app name – must be unique
-primary_region = "sin"   # Singapore – fast from India
-
-[build]
-  dockerfile = "Dockerfile"
-
-[http_service]
-  internal_port = 8080
-  force_https = true
-  auto_stop_machines = false   # keep always on
-  auto_start_machines = true
-
-[env]
-  MODEL = "TheBloke/TinyLlama-1.1B-Chat-GPTQ"
-  MAX_TOKENS = "512"
+COPY index.html /app/static/index.html
 
   index.html
   <!DOCTYPE html>
