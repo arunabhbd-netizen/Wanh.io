@@ -1,0 +1,108 @@
+Dockerfile
+FROM ghcr.io/huggingface/text-generation-inference:1.4
+
+ENV MODEL_ID=${MODEL}
+ENV QUANTIZE=gptq
+ENV MAX_INPUT_LENGTH=1024
+ENV MAX_TOTAL_TOKENS=2048
+ENV MAX_BATCH_PREFILL_TOKENS=2048
+
+# copy custom chat UI
+COPY static /app/static
+ENV UI_PATH=/app/static
+
+fly.toml
+app = "wanh-ai"          # your app name – must be unique
+primary_region = "sin"   # Singapore – fast from India
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false   # keep always on
+  auto_start_machines = true
+
+[env]
+  MODEL = "TheBloke/TinyLlama-1.1B-Chat-GPTQ"
+  MAX_TOKENS = "512"
+
+  index.html
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Wanh – Your AI</title>
+<style>
+:root{--bg:#111;--chat:#1a1a1a;--user:#0af;--bot:#444;--text:#eee}
+*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{margin:0;height:100vh;display:flex;flex-direction:column;background:var(--bg);color:var(--text)}
+header{padding:1rem;font-size:1.3rem;font-weight:600;border-bottom:1px solid #333}
+#box{flex:1;overflow-y:auto;padding:1rem}
+.bubble{margin-bottom:1rem;display:flex}
+.bubble.user{justify-content:flex-end}
+.bubble .txt{padding:.8rem 1rem;border-radius:18px;max-width:75%;word-wrap:break-word}
+.bubble.user .txt{background:var(--user)}
+.bubble.bot  .txt{background:var(--bot)}
+#form{display:flex;border-top:1px solid #333;padding:.5rem}
+#msg{flex:1;padding:.7rem;border:none;border-radius:20px;background:#222;color:var(--text)}
+#send{width:60px;border:none;border-radius:50%;background:var(--user);color:#fff;margin-left:.5rem}
+small{display:block;margin-top:.3rem;opacity:.6}
+</style>
+</head>
+<body>
+<header>Wanh</header>
+<div id="box"></div>
+<form id="form">
+  <input id="msg" placeholder="Ask anything…" autocomplete="off"/>
+  <button id="send">➤</button>
+</form>
+
+<script>
+const box = document.getElementById('box');
+const form = document.getElementById('form');
+const msg  = document.getElementById('msg');
+
+function add(who,text){
+  const d=document.createElement('div');d.className='bubble '+who;
+  const t=document.createElement('div');t.className='txt';
+  t.textContent=text;d.appendChild(t);box.appendChild(d);
+  box.scrollTop=box.scrollHeight;
+}
+
+async function ask(q){
+  add('user',q);
+  add('bot','…');
+  const bubble=document.querySelector('.bubble.bot:last-child .txt');
+
+  const res=await fetch('/generate',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({inputs:q,parameters:{max_new_tokens:512,temperature:.7}})
+  });
+  const reader=res.body.getReader();
+  const dec=new TextDecoder();
+  let done=false,buf='';
+  while(!done){
+    const {value,done:d}=await reader.read();done=d;
+    buf+=dec.decode(value,{stream:!done});
+    // simple parse: each line is {"token":{"text":"…"}}
+    const lines=buf.split('\n'); buf=lines.pop()||'';
+    for(const l of lines){
+      if(!l.trim())continue;
+      try{const tok=JSON.parse(l).token.text;bubble.textContent+=tok;}catch(e){}
+    }
+  }
+}
+
+form.onsubmit=(e)=>{
+  e.preventDefault();
+  const q=msg.value.trim(); if(!q)return;
+  msg.value='';
+  ask(q);
+};
+</script>
+</body>
+</html>
