@@ -1,0 +1,15 @@
+app = "wanh-ai"          # your app name – must be unique
+primary_region = "sin"   # Singapore – fast from India
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false   # keep always on
+  auto_start_machines = true
+
+[env]
+  MODEL = "TheBloke/TinyLlama-1.1B-Chat-GPTQ"
+  MAX_TOKENS = "512"
