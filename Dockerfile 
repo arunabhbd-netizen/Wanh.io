@@ -1,7 +1,0 @@
-FROM ghcr.io/huggingface/text-generation-inference:1.4
-ENV MODEL_ID=TheBloke/TinyLlama-1B-Chat-GPTQ
-ENV QUANTIZE=gptq
-ENV MAX_INPUT_LENGTH=1024
-ENV MAX_TOTAL_TOKENS=2048
-ENV MAX_BATCH_PREFILL_TOKENS=2048
-COPY index.html /app/static/index.html
